@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <fstream> 
 #include "ast.hpp"
 
 using namespace std;
@@ -10,6 +11,10 @@ using namespace std;
 //调试命令：
 //docker run -it --rm -v /Users/qichangqing/Desktop/compiler:/root/compiler maxxing/compiler-dev bash
 //build/compiler -koopa hello.c -o hello
+
+//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv1 /root/compiler
+
+
 // 声明 lexer 的输入, 以及 parser 函数
 // 为什么不引用 sysy.tab.hpp 呢? 因为首先里面没有 yyin 的定义
 // 其次, 因为这个文件不是我们自己写的, 而是被 Bison 生成出来的
@@ -41,11 +46,12 @@ int main(int argc, const char *argv[]) {
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
   assert(!ret);
-
+ //将koopa ir输出到指定文件
+  BaseAST::initOdir(output,std::ios::in | std::ios::out | std::ios::trunc);
   // dump AST
   ast->Dump();
+  BaseAST::oir->close();
   cout << endl;
-
-
+ 
   return 0;
 }

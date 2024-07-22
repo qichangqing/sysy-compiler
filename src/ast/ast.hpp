@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <fstream> 
+#include <memory>
 
 using namespace std;
 // 所有 AST 的基类
@@ -9,6 +11,9 @@ class BaseAST {
   virtual ~BaseAST() = default;
 
   virtual void Dump() const = 0;
+  static fstream *oir;
+  static void initOdir(const std::string& filename, std::ios_base::openmode mode);
+
 };
 
 // CompUnit 是 BaseAST
@@ -18,9 +23,9 @@ class CompUnitAST : public BaseAST {
   std::unique_ptr<BaseAST> func_def;
 
   void Dump() const override {
-    std::cout << "CompUnitAST { ";
+    // std::cout << "CompUnitAST { ";
     func_def->Dump();
-    std::cout << " }";
+    // std::cout << " }";
     }
 };
 
@@ -32,11 +37,14 @@ class FuncDefAST : public BaseAST {
   std::unique_ptr<BaseAST> block;
 
   void Dump() const override {
-    std::cout << "FuncDefAST { ";
-    func_type->Dump();
-    std::cout << ", " << ident << ", ";
+    string s1="fun @main(): i32 { \n";
+    std::cout << s1;
+    *BaseAST::oir<<s1;
+    // func_type->Dump();
+    // std::cout << ", " << ident << ", ";
     block->Dump();
     std::cout << " }";
+    *BaseAST::oir << " }";
     }
 };
 
@@ -65,24 +73,27 @@ class BlockAST : public BaseAST {
     public:
         std::unique_ptr<BaseAST> stmt;
         void Dump() const override {
-            std::cout << "BlockAST { ";
+            string s1="%entry: \n";
+            std::cout << s1;
+            *BaseAST::oir<<s1;
             stmt->Dump();
-            std::cout << " }";
         }
 };
 class StmtAST : public BaseAST {
     public:
         std::unique_ptr<BaseAST> number;
         void Dump() const override {
-            std::cout << "StmtAST { ";
+            string s1="  ret ";
+            cout<<s1;
+            *BaseAST::oir<<s1;
             number->Dump();
-            std::cout << " }";
         }
 };
 class NumberAST : public BaseAST {
     public:
         int number;
         void Dump() const override {
-            std::cout << this->number;
+            std::cout << this->number<<"\n";
+            *BaseAST::oir << this->number<<"\n";
         }
 };
