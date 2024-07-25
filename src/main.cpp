@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <fstream> 
+#include <sstream>
+#include "IRTransformRaw.hpp"
 #include "ast.hpp"
 
 using namespace std;
@@ -13,6 +15,9 @@ using namespace std;
 //build/compiler -koopa hello.c -o hello
 
 //docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv1 /root/compiler
+
+//lv2.3测试命令
+//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -riscv -s lv1 /root/compiler
 
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -51,6 +56,12 @@ int main(int argc, const char *argv[]) {
   // dump AST
   ast->Dump();
   BaseAST::oir->close();
+  string s=BaseAST::ss.str();
+  cout<<"\n--------\n"<<s;
+  const char * pc=s.c_str();
+  //转换成RISC-V汇编指令  
+  //,output,std::ios::in | std::ios::out | std::ios::trunc
+  transformToRaw(pc,output,std::ios::in | std::ios::out | std::ios::trunc);
   cout << endl;
  
   return 0;

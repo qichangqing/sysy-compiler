@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream> 
 #include <memory>
+#include <sstream>
 
 using namespace std;
 // 所有 AST 的基类
@@ -13,7 +14,8 @@ class BaseAST {
   virtual void Dump() const = 0;
   static fstream *oir;
   static void initOdir(const std::string& filename, std::ios_base::openmode mode);
-
+  //保存生成的ir字符串序列
+  static stringstream ss;
 };
 
 // CompUnit 是 BaseAST
@@ -39,11 +41,13 @@ class FuncDefAST : public BaseAST {
   void Dump() const override {
     string s1="fun @main(): i32 { \n";
     std::cout << s1;
+    BaseAST::ss<<s1;
     *BaseAST::oir<<s1;
     // func_type->Dump();
     // std::cout << ", " << ident << ", ";
     block->Dump();
     std::cout << " }";
+    BaseAST::ss<<" }";
     *BaseAST::oir << " }";
     }
 };
@@ -75,6 +79,7 @@ class BlockAST : public BaseAST {
         void Dump() const override {
             string s1="%entry: \n";
             std::cout << s1;
+            BaseAST::ss<<s1;
             *BaseAST::oir<<s1;
             stmt->Dump();
         }
@@ -85,6 +90,7 @@ class StmtAST : public BaseAST {
         void Dump() const override {
             string s1="  ret ";
             cout<<s1;
+            BaseAST::ss<<s1;
             *BaseAST::oir<<s1;
             number->Dump();
         }
@@ -94,6 +100,7 @@ class NumberAST : public BaseAST {
         int number;
         void Dump() const override {
             std::cout << this->number<<"\n";
+            BaseAST::ss<<this->number<<"\n";
             *BaseAST::oir << this->number<<"\n";
         }
 };

@@ -1,6 +1,7 @@
 #include "ast.hpp"
 
 fstream *BaseAST::oir=nullptr;
+stringstream BaseAST::ss;
 
 // 静态函数实现，用于打开文件并初始化指针
 void BaseAST::initOdir(const std::string& filename, std::ios_base::openmode mode) {
