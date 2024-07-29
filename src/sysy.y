@@ -42,7 +42,7 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp UnaryOp
 //%type <int_val> Number
 
 %%
@@ -105,11 +105,10 @@ FuncType
     ftp->ft="int";
     $$=ftp;
   }
+  ;
 
 Block
   : '{' Stmt '}' {
-    //auto stmt = unique_ptr<string>($2);
-    //$$ = new string("{ " + *stmt + " }");
     auto b= new BlockAST();
     b->stmt=unique_ptr<BaseAST>($2);
     $$=b;
@@ -117,22 +116,64 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
-    auto s=new StmtAST();
-    s->number = unique_ptr<BaseAST>($2);
-    $$ = s;
+  : RETURN Exp ';' {
+    auto exp=std::unique_ptr<BaseAST>($2);
+    auto stmt=new StmtAST(exp);
+    $$=stmt;
+  }
+  ;
+
+Exp
+  : UnaryExp {
+    auto ue=std::unique_ptr<BaseAST>($1);
+    auto e=new ExpAST(ue);
+    $$=e;
+  }
+  ;
+
+PrimaryExp
+  : '(' Exp ')' {
+    auto exp=std::unique_ptr<BaseAST>($2);
+    auto pe=new PrimaryExpAST(EXP,exp);
+    $$=pe;
+  }
+  | Number {
+    auto num=std::unique_ptr<BaseAST>($1);
+    auto pe=new PrimaryExpAST(NUM,num);
+    $$=pe;
   }
   ;
 
 Number
   : INT_CONST {
-    auto n=new NumberAST();
-    n->number=$1;
-    //$$ = new string(to_string($1));
-    $$=n;
+    auto nu=new NumberAST($1);
+    $$=nu;
   }
   ;
 
+UnaryExp: 
+    PrimaryExp {
+      auto pexp=std::unique_ptr<BaseAST>($1);
+      auto ue=new UnaryExpAST(PEXP,pexp);
+      $$=ue; } 
+  | UnaryOp UnaryExp {
+      auto unaryOp=std::unique_ptr<BaseAST>($1);
+      auto unaryExp=std::unique_ptr<BaseAST>($2);
+      auto uep=new UnaryExpAST(UOUEXP,unaryOp,unaryExp);
+      $$=uep; }
+  ;
+
+UnaryOp: 
+    '+' {
+      $$=new UnaryOpAST(POSITIVE);
+    }
+  | '-' {
+      $$=new UnaryOpAST(NEGATIVE);
+    } 
+  | '!' {
+      $$=new UnaryOpAST(NOT);
+    }
+  ;
 %%
 
 // 定义错误处理函数, 其中第二个参数是错误信息

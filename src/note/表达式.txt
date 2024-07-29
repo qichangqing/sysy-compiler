@@ -1,0 +1,8 @@
+//一元表达式
+Stmt        ::= "return" Exp ";";
+
+Exp         ::= UnaryExp;
+PrimaryExp  ::= "(" Exp ")" | Number;
+Number      ::= INT_CONST;
+UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
+UnaryOp     ::= "+" | "-" | "!";

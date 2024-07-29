@@ -3,21 +3,17 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <fstream> 
+#include <fstream>
 #include <sstream>
 #include "IRTransformRaw.hpp"
 #include "ast.hpp"
+#include "IR2RISCV.hpp"
 
 using namespace std;
 
-//调试命令：
-//docker run -it --rm -v /Users/qichangqing/Desktop/compiler:/root/compiler maxxing/compiler-dev bash
-//build/compiler -koopa hello.c -o hello
-
-//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv1 /root/compiler
-
-//lv2.3测试命令
-//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -riscv -s lv1 /root/compiler
+// 调试命令：
+// docker run -it --rm -v /Users/qichangqing/Desktop/compiler:/root/compiler maxxing/compiler-dev bash
+// build/compiler -koopa hello.c -o hello
 
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -28,7 +24,8 @@ using namespace std;
 extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
 
-int main(int argc, const char *argv[]) {
+int main(int argc, const char *argv[])
+{
   // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:
   // compiler 模式 输入文件 -o 输出文件
   assert(argc == 5);
@@ -51,18 +48,27 @@ int main(int argc, const char *argv[]) {
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
   assert(!ret);
- //将koopa ir输出到指定文件
-  BaseAST::initOdir(output,std::ios::in | std::ios::out | std::ios::trunc);
-  // dump AST
-  ast->Dump();
-  BaseAST::oir->close();
-  string s=BaseAST::ss.str();
-  cout<<"\n--------\n"<<s;
-  const char * pc=s.c_str();
-  //转换成RISC-V汇编指令  
-  //,output,std::ios::in | std::ios::out | std::ios::trunc
-  transformToRaw(pc,output,std::ios::in | std::ios::out | std::ios::trunc);
-  cout << endl;
- 
+  // 生成koopa ir目标代码
+  string s1 = "expvalue";
+  int no = 0;
+  bool isIV = false;
+  // cout << endl<< "++++++++++++++" << endl;
+  ast->GenIR(s1, &no, isIV);
+  string res = BaseAST::ss.str();
+  cout << "-----------\n";
+  cout << res;
+  if (strcmp(mode, "-koopa") == 0)
+  {
+    // 将生成的ir代码存放到output文件中
+    ofstream ofile(output);
+    ofile << res;
+    ofile.close();
+  }
+  else if (strcmp(mode, "-riscv") == 0)
+  {
+    // 生成riscv目标代码
+    cout << "-riscv:\n";
+    Compiler_IR2RISCV(res.c_str(), output);
+  }
   return 0;
 }

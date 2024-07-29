@@ -1,20 +1,17 @@
   .text
   .globl main
 main:
-  li    t0, 100
-  xor   t0, t0, x0
-  seqz  t0, t0
+  li    t0, 8
   sub   t1, x0, t0
   xor   t1, t1, x0
   seqz  t1, t1
   sub   t2, x0, t1
+  xor   t2, t2, x0
+  seqz  t2, t2
   sub   t3, x0, t2
   sub   t4, x0, t3
   sub   t5, x0, t4
   xor   t5, t5, x0
   seqz  t5, t5
-  sub   t6, x0, t5
-  xor   t6, t6, x0
-  seqz  t6, t6
-  mv    a0, t6
+  mv    a0, t5
   ret
