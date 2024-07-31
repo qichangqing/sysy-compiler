@@ -13,7 +13,8 @@ using namespace std;
 
 // 调试命令：
 // docker run -it --rm -v /Users/qichangqing/Desktop/compiler:/root/compiler maxxing/compiler-dev bash
-// build/compiler -koopa hello.c -o hello
+// build/compiler -koopa hello.c -o hello.koopa
+//build/compiler -riscv hello.c -o hello.riscv
 
 
 // 声明 lexer 的输入, 以及 parser 函数

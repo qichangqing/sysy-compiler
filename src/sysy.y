@@ -42,7 +42,7 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp UnaryOp
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp UnaryOp AddExp MulExp
 //%type <int_val> Number
 
 %%
@@ -124,11 +124,57 @@ Stmt
   ;
 
 Exp
-  : UnaryExp {
-    auto ue=std::unique_ptr<BaseAST>($1);
-    auto e=new ExpAST(ue);
+  : AddExp {
+    auto ae=std::unique_ptr<BaseAST>($1);
+    auto e=new ExpAST(ae);
     $$=e;
   }
+  ;
+
+MulExp
+  : UnaryExp {
+    auto ue=std::unique_ptr<BaseAST>($1);
+    auto m=new MulExpAST(UEXP,ue);
+    $$=m;
+  }
+  | MulExp '*' UnaryExp { 
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ue=std::unique_ptr<BaseAST>($3);
+    auto meopue=new MulExpAST(UOPMEXP,me,'*',ue);
+    $$=meopue;
+   }
+  | MulExp '/' UnaryExp { 
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ue=std::unique_ptr<BaseAST>($3);
+    auto meopue=new MulExpAST(UOPMEXP,me,'/',ue);
+    $$=meopue;
+   }
+  | MulExp '%' UnaryExp { 
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ue=std::unique_ptr<BaseAST>($3);
+    auto meopue=new MulExpAST(UOPMEXP,me,'%',ue);
+    $$=meopue;
+   }
+  ;
+
+AddExp
+  : MulExp {
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ae=new AddExpAST(MULEXP,me);
+    $$=ae;
+  }
+  | AddExp '+' MulExp { 
+    auto ae=std::unique_ptr<BaseAST>($1);
+    auto me=std::unique_ptr<BaseAST>($3);
+    auto aeopme=new AddExpAST(ADDMULEXP,ae,'+',me);
+    $$=aeopme;
+    }
+  | AddExp '-' MulExp { 
+    auto ae=std::unique_ptr<BaseAST>($1);
+    auto me=std::unique_ptr<BaseAST>($3);
+    auto aeopme=new AddExpAST(ADDMULEXP,ae,'-',me);
+    $$=aeopme;
+    }
   ;
 
 PrimaryExp

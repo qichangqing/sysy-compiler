@@ -7,6 +7,7 @@ int it = 0;
 string ta[8] = {"a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
 bool ta_inuse[8] = {false, false, false, false, false, false, false, false};
 int ia = 0;
+stack<string> op_num_stack;
 void travel_raw_slice(koopa_raw_slice_t slice);
 void Compiler_IR2RISCV(const char *str, const char *output)
 {
@@ -84,6 +85,55 @@ void gen_risc_from_block(koopa_raw_basic_block_t block)
 {
     travel_raw_slice(block->insts);
 }
+void gen_alexp(koopa_raw_binary_t bi,string op)
+{
+    // cout<<op<<endl;
+    string res = "";
+    bool l_is_int = false;
+    bool r_is_int = false;
+    if (bi.lhs->kind.tag == KOOPA_RVT_INTEGER)
+    {
+        res += "  li    ";
+        res += tt[it];
+        op_num_stack.push(tt[it]);
+        res += ", ";
+        res += to_string(bi.lhs->kind.data.integer.value);
+        res += "\n";
+        l_is_int = true;
+    }
+    if (bi.rhs->kind.tag == KOOPA_RVT_INTEGER)
+    {
+        if (l_is_int)
+        {
+            it = (it + 1) % 7;
+        }
+        res += "  li    ";
+        res += tt[it];
+        op_num_stack.push(tt[it]);
+        res += ", ";
+        res += to_string(bi.rhs->kind.data.integer.value);
+        res += "\n";
+        r_is_int=true;
+    }
+    string num2=op_num_stack.top();
+    op_num_stack.pop();
+    string num1=op_num_stack.top();
+    if(op=="mul"){
+        cout<<num1<<" "<<num2<<endl;
+    }
+    op_num_stack.pop();
+    res += "  "+op+"   ";
+    res += num2;
+    op_num_stack.push(num2);
+    res += ", ";
+    res += num1;
+    res += ", ";
+    res += num2;
+    res += "\n";
+    ss_riscv << res;
+    // cout<<res;
+    it = (it + 1) % 7;
+}
 void gen_risc_from_inst(koopa_raw_value_t inst)
 {
     if (inst->kind.tag == KOOPA_RVT_BINARY)
@@ -147,31 +197,85 @@ void gen_risc_from_inst(koopa_raw_value_t inst)
         }
         else if (bi.op == KOOPA_RBO_SUB)
         {
-            // case KOOPA_RBO_SUB:
-            // cout << "sublrtag: " << bi.lhs->kind.tag << " " << bi.rhs->kind.tag << endl;
-            // cout << "binaryAddr: " << &bi << " 操作符: " << bi.op << " 左操作数：" << (bi.lhs->kind.data.integer.value) << " 右操作数：" << (bi.rhs->kind.data.binary.op) << endl;
-            // cout << "sub右操作数操作类型op: " << bi.rhs->kind.data.binary.op << endl;
+            // cout<<"sub\n";
             string res = "";
+            bool l_is_z = false;
+            bool t_inuse = false;
+            if (bi.lhs->kind.tag == KOOPA_RVT_INTEGER)
+            {
+                int li = bi.lhs->kind.data.integer.value;
+                if (li == 0)
+                {
+                    l_is_z = true;
+                }
+                else
+                {
+                    res += "  li    ";
+                    res += tt[it];
+                    op_num_stack.push(tt[it]);
+                    res += ", ";
+                    res += to_string(li);
+                    res += "\n";
+                    t_inuse = true;
+                }
+            }
             // 需要load立即数
             if (bi.rhs->kind.tag == KOOPA_RVT_INTEGER)
             {
                 res += "  li    ";
+                if (t_inuse == true)
+                {
+                    it = (it + 1) % 7;
+                }
                 res += tt[it];
+                op_num_stack.push(tt[it]);
                 res += ", ";
                 res += to_string(bi.rhs->kind.data.integer.value);
                 res += "\n";
             }
+            string num2="";
+            string num1="";
             res += "  sub   ";
             int i = (it + 1) % 7;
+            if (l_is_z)
+            {
+                num1="x0";
+                num2=op_num_stack.top();
+                op_num_stack.pop();
+            }
+            else
+            {
+                num2=op_num_stack.top();
+                op_num_stack.pop();
+                num1=op_num_stack.top();
+                op_num_stack.pop();
+            }
             res += tt[i];
-            res += ", x0, ";
-            res += tt[it];
+            op_num_stack.push(tt[i]);
+            res += ", ";
+            res+=num1;
+            res+=", ";
+            res+=num2;
             res += "\n";
-            it = i;
+            it = (it+1)%7;
+            // cout<<res;
             ss_riscv << res;
         }
-        else
+        else if (bi.op == KOOPA_RBO_ADD)
         {
+            gen_alexp(bi,"add");
+        }
+        else if (bi.op == KOOPA_RBO_MUL)
+        {
+            gen_alexp(bi,"mul");
+        }
+        else if (bi.op == KOOPA_RBO_DIV)
+        {
+            gen_alexp(bi,"div");
+        }
+        else if (bi.op == KOOPA_RBO_MOD)
+        {
+            gen_alexp(bi,"mod");
         }
     }
     else if (inst->kind.tag == KOOPA_RVT_RETURN)
@@ -181,7 +285,8 @@ void gen_risc_from_inst(koopa_raw_value_t inst)
         {
             // cout << "returnValue: BINARY\n";
             string res = "  mv    a0, ";
-            res += tt[it];
+            res += op_num_stack.top();
+            op_num_stack.pop();
             res += "\n";
             res += "  ret\n";
             ss_riscv << res;

@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstring>
 #include <sstream>
+#include <stack>
 #include "koopa.h"
 
 
