@@ -13,7 +13,7 @@ public:
     virtual ~BaseAST() = default;
 
     virtual void Dump() const = 0;
-    virtual void GenIR(string &peValue, int *no, bool &isIV) const = 0;
+    virtual void GenIR(string &peValue, int *no, int *isIV) const = 0;
     static fstream *oir;
     static void initOdir(const std::string &filename, std::ios_base::openmode mode);
     // 保存生成的ir字符串序列
@@ -31,8 +31,9 @@ public:
         // BaseAST::ss << this->number << "\n";
         *BaseAST::oir << this->number << "\n";
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "NumberAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
     }
     void Num2IR(string &numValue)
     {
@@ -78,11 +79,12 @@ public:
         // BaseAST::ss << s1;
         *BaseAST::oir << s1;
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "PrimaryExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         this->PE2IR(peValue, no, isIV);
     }
-    void PE2IR(string &peValue, int *no, bool &isIV) const
+    void PE2IR(string &peValue, int *no, int *isIV) const
     {
         if (tag == EXP)
         {
@@ -93,7 +95,7 @@ public:
         else
         {
             // 生成加载立即数的代码
-            isIV = true;
+            *isIV = 1;
             std::unique_ptr<NumberAST>(dynamic_cast<NumberAST *>(num.get()))->Num2IR(peValue);
         }
     }
@@ -118,8 +120,9 @@ public:
         // BaseAST::ss << s1;
         *BaseAST::oir << s1;
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "UnaryOpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
     }
 };
 typedef enum
@@ -157,11 +160,12 @@ public:
         // BaseAST::ss << s1;
         *BaseAST::oir << s1;
     }
-    void GenIR(string &pv, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
-        this->UExp2IR(pv, no, isIV);
+        // cout << "UnaryExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
+        this->UExp2IR(peValue, no, isIV);
     }
-    void UExp2IR(string &uexpValue, int *no, bool &isIV) const
+    void UExp2IR(string &uexpValue, int *no, int *isIV) const
     {
         if (tag == PEXP)
         {
@@ -181,7 +185,7 @@ public:
             switch (op->uop)
             {
             case NEGATIVE:
-                if (isIV)
+                if (*isIV)
                 {
                     // res = "%" + (*no + 1) + "=sub 0, " + uexpValue + "\n";
                     res += "  %";
@@ -200,13 +204,13 @@ public:
                     res += "\n";
                     (*no)++;
                 }
-                isIV = false;
+                *isIV = 0;
                 // cout<<"no:"<<*no<<endl;
                 BaseAST::ss << res;
                 // cout << res;
                 break;
             case NOT:
-                if (isIV)
+                if (*isIV)
                 {
                     // res = "%" + (*no + 1) + "=eq " + uexpValue + ", 0" + "\n";
                     res += "  %";
@@ -227,7 +231,7 @@ public:
                     res += "\n";
                     (*no)++;
                 }
-                isIV = false;
+                *isIV = 0;
                 // cout<<"no:"<<*no<<endl;
                 BaseAST::ss << res;
                 // cout << res;
@@ -266,8 +270,9 @@ public:
 
     };
 
-    void GenIR(string &peValue, int *no, bool &isIV) const
+    void GenIR(string &peValue, int *no, int *isIV) const
     {
+        // cout << "MulExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         if (tag == UEXP)
         {
             // 乘法表达式只包含一个一元表达式
@@ -290,17 +295,17 @@ public:
             }
         }
     }
-    void gen_ir_by_op(string &peValue, int *no, bool &isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
+    void gen_ir_by_op(string &peValue, int *no, int *isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
     {
         leftExp->GenIR(peValue, no, isIV);
         string res = "";
-        if (isIV)
+        if (*isIV)
         {
             res += op;
             res += " ";
             res += peValue;
             res += ",";
-            isIV=false;
+            *isIV = 0;
         }
         else
         {
@@ -311,11 +316,11 @@ public:
             (*no)++;
         }
         rightExp->GenIR(peValue, no, isIV);
-        if (isIV)
+        if (*isIV)
         {
             res += peValue;
             res += "\n";
-            isIV=false;
+            *isIV = 0;
         }
         else
         {
@@ -356,8 +361,9 @@ public:
     void Dump() const {
 
     };
-    void GenIR(string &peValue, int *no, bool &isIV) const
+    void GenIR(string &peValue, int *no, int *isIV) const
     {
+        // cout << "AddExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         if (tag == MULEXP)
         {
             // 只包含一个乘法表达式
@@ -375,17 +381,17 @@ public:
             }
         }
     }
-    void gen_ir_by_op(string &peValue, int *no, bool &isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
+    void gen_ir_by_op(string &peValue, int *no, int *isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
     {
         leftExp->GenIR(peValue, no, isIV);
         string res = "";
-        if (isIV)
+        if (*isIV)
         {
             res += op;
             res += " ";
             res += peValue;
             res += ",";
-            isIV=false;
+            *isIV = 0;
         }
         else
         {
@@ -396,11 +402,375 @@ public:
             (*no)++;
         }
         rightExp->GenIR(peValue, no, isIV);
-        if (isIV)
+        if (*isIV)
         {
             res += peValue;
             res += "\n";
-            isIV=false;
+            *isIV = 0;
+        }
+        else
+        {
+            res += "%";
+            res += to_string(*no);
+            res += "\n";
+            (*no)++;
+        }
+        string h = "  %";
+        h += to_string(*no);
+        h += " = ";
+        res = h + res;
+        BaseAST::ss << res;
+    }
+};
+typedef enum
+{
+    ADD_EXP,
+    REL_OP_ADD_EXP
+} rel_type;
+class RelExpAST : public BaseAST
+{
+public:
+    rel_type tag;
+    std::unique_ptr<BaseAST> addExp;
+    std::unique_ptr<BaseAST> relExp;
+    string op;
+    std::unique_ptr<BaseAST> opAddExp;
+
+    RelExpAST(rel_type _tag, std::unique_ptr<BaseAST> &_addExp) : tag(_tag)
+    {
+        addExp = std::move(_addExp);
+    }
+    RelExpAST(rel_type _tag, std::unique_ptr<BaseAST> &_relExp, string _op, std::unique_ptr<BaseAST> &_opAddExp) : tag(_tag), op(_op)
+    {
+        relExp = std::move(_relExp);
+        opAddExp = std::move(_opAddExp);
+    }
+    void Dump() const override
+    {
+        // addExp->Dump();
+        string s1 = " RelExpAST生成的IR代码 ";
+        // cout << s1;
+        // BaseAST::ss << s1;
+        *BaseAST::oir << s1;
+    }
+    void GenIR(string &peValue, int *no, int *isIV) const override
+    {
+        // cout << "RelExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
+        if (tag == ADD_EXP)
+        {
+            // 只包含一个乘法表达式
+            addExp->GenIR(peValue, no, isIV);
+        }
+        else
+        {
+            if (op == ">")
+            {
+                gen_ir_by_op(peValue, no, isIV, relExp.get(), "gt", opAddExp.get());
+            }
+            else if (op == "<")
+            {
+                gen_ir_by_op(peValue, no, isIV, relExp.get(), "lt", opAddExp.get());
+            }
+            else if (op == ">=")
+            {
+                gen_ir_by_op(peValue, no, isIV, relExp.get(), "ge", opAddExp.get());
+            }
+            else if (op == "<=")
+            {
+                gen_ir_by_op(peValue, no, isIV, relExp.get(), "le", opAddExp.get());
+            }
+        }
+    }
+    void gen_ir_by_op(string &peValue, int *no, int *isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
+    {
+        leftExp->GenIR(peValue, no, isIV);
+        string res = "";
+        if (*isIV)
+        {
+            res += op;
+            res += " ";
+            res += peValue;
+            res += ",";
+            *isIV = 0;
+        }
+        else
+        {
+            res += op;
+            res += " %";
+            res += to_string(*no);
+            res += ",";
+            (*no)++;
+        }
+        rightExp->GenIR(peValue, no, isIV);
+        if (*isIV)
+        {
+            res += peValue;
+            res += "\n";
+            *isIV = 0;
+        }
+        else
+        {
+            res += "%";
+            res += to_string(*no);
+            res += "\n";
+            (*no)++;
+        }
+        string h = "  %";
+        h += to_string(*no);
+        h += " = ";
+        res = h + res;
+        BaseAST::ss << res;
+    }
+};
+typedef enum
+{
+    RELEXP,
+    EQ_OP_RELEXP
+} eq_type;
+class EqExpAST : public BaseAST
+{
+public:
+    eq_type tag;
+    std::unique_ptr<BaseAST> relExp;
+    std::unique_ptr<BaseAST> eqExp;
+    string op;
+    std::unique_ptr<BaseAST> opRelExp;
+
+    EqExpAST(eq_type _tag, std::unique_ptr<BaseAST> &_relExp) : tag(_tag)
+    {
+        relExp = std::move(_relExp);
+    }
+    EqExpAST(eq_type _tag, std::unique_ptr<BaseAST> &_eqExp, string _op, std::unique_ptr<BaseAST> &_opRelExp) : tag(_tag), op(_op)
+    {
+        eqExp = std::move(_eqExp);
+        opRelExp = std::move(_opRelExp);
+    }
+    void Dump() const override
+    {
+        // addExp->Dump();
+        string s1 = " EqExpAST生成的IR代码 ";
+        // cout << s1;
+        // BaseAST::ss << s1;
+        *BaseAST::oir << s1;
+    }
+    void GenIR(string &peValue, int *no, int *isIV) const override
+    {
+        // cout << "EqExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
+        if (tag == RELEXP)
+        {
+            // 只包含一个乘法表达式
+            relExp->GenIR(peValue, no, isIV);
+        }
+        else
+        {
+            if (op == "==")
+            {
+                gen_ir_by_op(peValue, no, isIV, eqExp.get(), "eq", opRelExp.get());
+            }
+            else if (op == "!=")
+            {
+                gen_ir_by_op(peValue, no, isIV, eqExp.get(), "ne", opRelExp.get());
+            }
+        }
+    }
+    void gen_ir_by_op(string &peValue, int *no, int *isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
+    {
+        leftExp->GenIR(peValue, no, isIV);
+        string res = "";
+        if (*isIV)
+        {
+            res += op;
+            res += " ";
+            res += peValue;
+            res += ",";
+            *isIV = 0;
+        }
+        else
+        {
+            res += op;
+            res += " %";
+            res += to_string(*no);
+            res += ",";
+            (*no)++;
+        }
+        rightExp->GenIR(peValue, no, isIV);
+        if (*isIV)
+        {
+            res += peValue;
+            res += "\n";
+            *isIV = 0;
+        }
+        else
+        {
+            res += "%";
+            res += to_string(*no);
+            res += "\n";
+            (*no)++;
+        }
+        string h = "  %";
+        h += to_string(*no);
+        h += " = ";
+        res = h + res;
+        BaseAST::ss << res;
+    }
+};
+typedef enum
+{
+    EQEXP,
+    LANDEXP_AND_EQEXP
+} landexp_type;
+class LAndExpAST : public BaseAST
+{
+public:
+    landexp_type tag;
+    std::unique_ptr<BaseAST> eqExp;
+    std::unique_ptr<BaseAST> lAndExp;
+    string op;
+    std::unique_ptr<BaseAST> opEqExp;
+
+    LAndExpAST(landexp_type _tag, std::unique_ptr<BaseAST> &_eqExp) : tag(_tag)
+    {
+        eqExp = std::move(_eqExp);
+    }
+    LAndExpAST(landexp_type _tag, std::unique_ptr<BaseAST> &_lAndExp, string _op, std::unique_ptr<BaseAST> &_opEqExp) : tag(_tag), op(_op)
+    {
+        lAndExp = std::move(_lAndExp);
+        opEqExp = std::move(_opEqExp);
+    }
+    void Dump() const override
+    {
+        // addExp->Dump();
+        string s1 = " LAndExpAST生成的IR代码 ";
+        // cout << s1;
+        // BaseAST::ss << s1;
+        *BaseAST::oir << s1;
+    }
+    void GenIR(string &peValue, int *no, int *isIV) const override
+    {
+        // cout << "LAndExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
+        if (tag == EQEXP)
+        {
+            // 只包含一个乘法表达式
+            eqExp->GenIR(peValue, no, isIV);
+        }
+        else
+        {
+            // 实现逻辑与
+            gen_ir_by_op(peValue, no, isIV, lAndExp.get(), "and", opEqExp.get());
+        }
+    }
+    void gen_ir_by_op(string &peValue, int *no, int *isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
+    {
+        leftExp->GenIR(peValue, no, isIV);
+        string res = "";
+        if (*isIV)
+        {
+            res += op;
+            res += " ";
+            res += peValue;
+            res += ",";
+            *isIV = 0;
+        }
+        else
+        {
+            res += op;
+            res += " %";
+            res += to_string(*no);
+            res += ",";
+            (*no)++;
+        }
+        rightExp->GenIR(peValue, no, isIV);
+        if (*isIV)
+        {
+            res += peValue;
+            res += "\n";
+            *isIV = 0;
+        }
+        else
+        {
+            res += "%";
+            res += to_string(*no);
+            res += "\n";
+            (*no)++;
+        }
+        string h = "  %";
+        h += to_string(*no);
+        h += " = ";
+        res = h + res;
+        BaseAST::ss << res;
+    }
+};
+typedef enum
+{
+    LANDEXP,
+    LOREXP_OR_LANDEXP
+} lorexp_type;
+class LOrExpAST : public BaseAST
+{
+public:
+    lorexp_type tag;
+    std::unique_ptr<BaseAST> lAndExp;
+    std::unique_ptr<BaseAST> lOrExp;
+    string op;
+    std::unique_ptr<BaseAST> opLAndExp;
+
+    LOrExpAST(lorexp_type _tag, std::unique_ptr<BaseAST> &_lAndExp) : tag(_tag)
+    {
+        lAndExp = std::move(_lAndExp);
+    }
+    LOrExpAST(lorexp_type _tag, std::unique_ptr<BaseAST> &_lOrExp, string _op, std::unique_ptr<BaseAST> &_opLAndExp) : tag(_tag), op(_op)
+    {
+        lOrExp = std::move(_lOrExp);
+        opLAndExp = std::move(_opLAndExp);
+    }
+    void Dump() const override
+    {
+        // addExp->Dump();
+        string s1 = " LOrExpAST生成的IR代码 ";
+        // cout << s1;
+        // BaseAST::ss << s1;
+        *BaseAST::oir << s1;
+    }
+    void GenIR(string &peValue, int *no, int *isIV) const override
+    {
+        // cout << "LOrExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
+        if (tag == LANDEXP)
+        {
+            // 只包含一个逻辑与
+            lAndExp->GenIR(peValue, no, isIV);
+        }
+        else
+        {
+            // 实现逻辑或
+            gen_ir_by_op(peValue, no, isIV, lOrExp.get(), "or", opLAndExp.get());
+        }
+    }
+    void gen_ir_by_op(string &peValue, int *no, int *isIV, BaseAST *leftExp, string op, BaseAST *rightExp) const
+    {
+        leftExp->GenIR(peValue, no, isIV);
+        string res = "";
+        if (*isIV)
+        {
+            res += op;
+            res += " ";
+            res += peValue;
+            res += ",";
+            *isIV = 0;
+        }
+        else
+        {
+            res += op;
+            res += " %";
+            res += to_string(*no);
+            res += ",";
+            (*no)++;
+        }
+        rightExp->GenIR(peValue, no, isIV);
+        if (*isIV)
+        {
+            res += peValue;
+            res += "\n";
+            *isIV = 0;
         }
         else
         {
@@ -419,29 +789,30 @@ public:
 class ExpAST : public BaseAST
 {
 public:
-    std::unique_ptr<BaseAST> addExp;
-    ExpAST(std::unique_ptr<BaseAST> &_addExp)
+    std::unique_ptr<BaseAST> lORExp;
+    ExpAST(std::unique_ptr<BaseAST> &_lOrExp)
     {
-        addExp = std::move(_addExp);
+        lORExp = std::move(_lOrExp);
     }
     void Dump() const override
     {
-        addExp->Dump();
+        lORExp->Dump();
         string s1 = " ExpAST生成的IR代码 ";
         // cout << s1;
         // BaseAST::ss << s1;
         *BaseAST::oir << s1;
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "ExpAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         this->Exp2IR(peValue, no, isIV);
     }
-    void Exp2IR(string &expValue, int *no, bool &isIV) const
+    void Exp2IR(string &expValue, int *no, int *isIV) const
     {
         // exp生成的代码
         //...
         // std::unique_ptr<UnaryExpAST>(dynamic_cast<UnaryExpAST *>(unaryExp.get()))->UExp2IR(expValue, no, isIV);
-        addExp->GenIR(expValue, no, isIV);
+        lORExp->GenIR(expValue, no, isIV);
     }
 };
 class StmtAST : public BaseAST
@@ -460,16 +831,17 @@ public:
         // BaseAST::ss << s1;
         *BaseAST::oir << s1;
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "StmtAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         this->Stmt2IR(peValue, no, isIV);
     }
-    void Stmt2IR(string &expValue, int *no, bool &isIV) const
+    void Stmt2IR(string &expValue, int *no, int *isIV) const
     {
         // std::unique_ptr<ExpAST>(dynamic_cast<ExpAST *>(exp.get()))->Exp2IR(expValue, no, isIV);
         exp->GenIR(expValue, no, isIV);
         string res = "";
-        if (isIV)
+        if (*isIV)
         {
             res = "  ret ";
             res += expValue;
@@ -497,20 +869,21 @@ public:
         *BaseAST::oir << s1;
         stmt->Dump();
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "BlockAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         this->Block2IR(peValue, no, isIV);
     }
-    void Block2IR(string &peValue, int *no, bool &isIV) const
+    void Block2IR(string &peValue, int *no, int *isIV) const
     {
         string expValue = "";
         int no1 = 0;
-        bool isIV1 = false;
+        int isIV1 = 0;
         string entry = "%entry:\n";
         BaseAST::ss << entry;
         // cout<<entry;
         // std::unique_ptr<StmtAST>(dynamic_cast<StmtAST *>(stmt.get()))->Stmt2IR(expValue, &no, isIV);
-        stmt->GenIR(peValue, &no1, isIV1);
+        stmt->GenIR(peValue, &no1, &isIV1);
     }
 };
 class FuncTypeAST : public BaseAST
@@ -523,8 +896,9 @@ public:
         std::cout << this->ft;
         std::cout << " }";
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "FuncTypeAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
     }
 };
 // FuncDef 也是 BaseAST
@@ -549,11 +923,12 @@ public:
         // BaseAST::ss << " }";
         *BaseAST::oir << " }";
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "FuncDefAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         this->Fun2IR(peValue, no, isIV);
     }
-    void Fun2IR(string &peValue, int *no, bool &isIV) const
+    void Fun2IR(string &peValue, int *no, int *isIV) const
     {
         // string s1 = "fun @" + ident + "():" + (std::unique_ptr<FuncTypeAST>(dynamic_cast<FuncTypeAST *>(func_type.get()))->ft) + "{ \n";
         string s1 = "fun @" + ident + "(): i32 { \n";
@@ -578,11 +953,12 @@ public:
         func_def->Dump();
         // std::cout << " }";
     }
-    void GenIR(string &peValue, int *no, bool &isIV) const override
+    void GenIR(string &peValue, int *no, int *isIV) const override
     {
+        // cout << "CompUnitAST---" << peValue<<"--" << *no <<"--"<< *isIV << endl;
         this->CU2IR(peValue, no, isIV);
     }
-    void CU2IR(string &peValue, int *no, bool &isIV) const
+    void CU2IR(string &peValue, int *no, int *isIV) const
     {
         // 完成编译单元的翻译工作
         //...

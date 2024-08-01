@@ -12,9 +12,11 @@
 using namespace std;
 
 // 调试命令：
-// docker run -it --rm -v /Users/qichangqing/Desktop/compiler:/root/compiler maxxing/compiler-dev bash
+// docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler/sysy-compiler maxxing/compiler-dev bash
 // build/compiler -koopa hello.c -o hello.koopa
 //build/compiler -riscv hello.c -o hello.riscv
+//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv3 /root/compiler
+
 
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -50,14 +52,14 @@ int main(int argc, const char *argv[])
   auto ret = yyparse(ast);
   assert(!ret);
   // 生成koopa ir目标代码
-  string s1 = "expvalue";
+  string s1 = "+";
   int no = 0;
-  bool isIV = false;
+  int isIV = 0;
   // cout << endl<< "++++++++++++++" << endl;
-  ast->GenIR(s1, &no, isIV);
+  ast->GenIR(s1, &no, &isIV);
   string res = BaseAST::ss.str();
-  cout << "-----------\n";
-  cout << res;
+  // cout << "-----------\n";
+  // cout << res;
   if (strcmp(mode, "-koopa") == 0)
   {
     // 将生成的ir代码存放到output文件中
@@ -68,7 +70,7 @@ int main(int argc, const char *argv[])
   else if (strcmp(mode, "-riscv") == 0)
   {
     // 生成riscv目标代码
-    cout << "-riscv:\n";
+    // cout << "-riscv:\n";
     Compiler_IR2RISCV(res.c_str(), output);
   }
   return 0;

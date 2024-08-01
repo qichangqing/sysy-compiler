@@ -4,11 +4,24 @@
 //   // return !-!-++---!-!+100;
   
 // }
+// int main() {
+//   return 1 + 2 * 3;
+//   // return (1+2)*(3-1);
+//   // return 1 + 2 * 3 - 6 / 2;
+//   // return 10-3*4+4/2%(1+2);
+//   // return (1+2)*(3--!1)+6/3;
+// }
+
 int main() {
-  return 1 + 2 * 3;
-  // return (1+2)*(3-1);
-  // return 1 + 2 * 3 - 6 / 2;
-  // return 10-3*4+4/2%(1+2);
-  // return (1+2)*(3--!1)+6/3;
+  // return 1 <= 2;
+  // return 1 + 2 * 3;
+  return 0;
+  // return 1 >= 2;
+  // return 1 != 2;
+  // return 1 > 2;
+  // return 1 != 2;
+  // return 1 && 2;
+  // return 1 || 2;
+  // return 2<3 && 4!=1||3==3;
 }
 
