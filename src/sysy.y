@@ -37,12 +37,12 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN
+%token INT RETURN LESS LESS_EQ GREATER GREATER_EQ EQ NOTEQ AND OR
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryOp UnaryExp PrimaryExp
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryOp UnaryExp PrimaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
 //%type <int_val> Number
 
 %%
@@ -125,11 +125,141 @@ Stmt
   ;
 
 Exp
-  : UnaryExp {
-    auto uexp=std::unique_ptr<BaseAST>($1);
-    auto exp=new ExpAST(uexp);
-    $$=exp;
+  : LOrExp {
+    auto loe=std::unique_ptr<BaseAST>($1);
+    auto e=new ExpAST(loe);
+    $$=e;
   }
+  ;
+
+RelExp: 
+    AddExp {
+      auto ae=std::unique_ptr<BaseAST>($1);
+      auto re=new RelExpAST(ADD_EXP,ae);
+      $$=re;
+    }
+  | 
+    RelExp LESS AddExp {
+      auto re=std::unique_ptr<BaseAST>($1);
+      auto ae=std::unique_ptr<BaseAST>($3);
+      auto rlae=new RelExpAST(REL_OP_ADD_EXP,re,"<",ae);
+      $$=rlae;
+    }
+  | 
+    RelExp GREATER AddExp {
+      auto re=std::unique_ptr<BaseAST>($1);
+      auto ae=std::unique_ptr<BaseAST>($3);
+      auto rlae=new RelExpAST(REL_OP_ADD_EXP,re,">",ae);
+      $$=rlae;
+    }
+  | 
+    RelExp LESS_EQ AddExp {
+      auto re=std::unique_ptr<BaseAST>($1);
+      auto ae=std::unique_ptr<BaseAST>($3);
+      auto rlae=new RelExpAST(REL_OP_ADD_EXP,re,"<=",ae);
+      $$=rlae;
+    }
+  | 
+    RelExp GREATER_EQ AddExp {
+      auto re=std::unique_ptr<BaseAST>($1);
+      auto ae=std::unique_ptr<BaseAST>($3);
+      auto rlae=new RelExpAST(REL_OP_ADD_EXP,re,">=",ae);
+      $$=rlae;
+    }
+  ;
+
+EqExp
+  : RelExp {
+    auto re=std::unique_ptr<BaseAST>($1);
+    auto ee=new EqExpAST(RELEXP,re);
+    $$=ee;
+  } 
+  | EqExp EQ RelExp {
+      auto ee=std::unique_ptr<BaseAST>($1);
+      auto re=std::unique_ptr<BaseAST>($3);
+      auto r=new EqExpAST(EQ_OP_RELEXP,ee,"==",re);
+      $$=r;
+    }
+  | EqExp NOTEQ RelExp {
+      auto ee=std::unique_ptr<BaseAST>($1);
+      auto re=std::unique_ptr<BaseAST>($3);
+      auto r=new EqExpAST(EQ_OP_RELEXP,ee,"!=",re);
+      $$=r;
+    }
+  ;
+
+LAndExp    
+  : EqExp {
+      auto eq=std::unique_ptr<BaseAST>($1);
+      auto lae=new LAndExpAST(EQEXP,eq);
+      $$=lae;
+    } 
+  | LAndExp AND EqExp {
+      auto lae=std::unique_ptr<BaseAST>($1);
+      auto ee=std::unique_ptr<BaseAST>($3);
+      auto r=new LAndExpAST(LANDEXP_AND_EQEXP,lae,"&&",ee);
+      $$=r;
+    }
+  ;
+
+LOrExp 
+  : LAndExp {
+      auto lae=std::unique_ptr<BaseAST>($1);
+      auto loe=new LOrExpAST(LANDEXP,lae);
+      $$=loe;
+    } 
+  | LOrExp OR LAndExp {
+      auto loe=std::unique_ptr<BaseAST>($1);
+      auto lae=std::unique_ptr<BaseAST>($3);
+      auto r=new LOrExpAST(LOREXP_OR_LANDEXP,loe,"||",lae);
+      $$=r;
+    }
+  ;
+
+MulExp
+  : UnaryExp {
+    auto ue=std::unique_ptr<BaseAST>($1);
+    auto m=new MulExpAST(UEXP,ue);
+    $$=m;
+  }
+  | MulExp '*' UnaryExp { 
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ue=std::unique_ptr<BaseAST>($3);
+    auto meopue=new MulExpAST(UOPMEXP,me,'*',ue);
+    $$=meopue;
+   }
+  | MulExp '/' UnaryExp { 
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ue=std::unique_ptr<BaseAST>($3);
+    auto meopue=new MulExpAST(UOPMEXP,me,'/',ue);
+    $$=meopue;
+   }
+  | MulExp '%' UnaryExp { 
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ue=std::unique_ptr<BaseAST>($3);
+    auto meopue=new MulExpAST(UOPMEXP,me,'%',ue);
+    $$=meopue;
+   }
+  ;
+
+AddExp
+  : MulExp {
+    auto me=std::unique_ptr<BaseAST>($1);
+    auto ae=new AddExpAST(MULEXP,me);
+    $$=ae;
+  }
+  | AddExp '+' MulExp { 
+    auto ae=std::unique_ptr<BaseAST>($1);
+    auto me=std::unique_ptr<BaseAST>($3);
+    auto aeopme=new AddExpAST(ADDMULEXP,ae,'+',me);
+    $$=aeopme;
+    }
+  | AddExp '-' MulExp { 
+    auto ae=std::unique_ptr<BaseAST>($1);
+    auto me=std::unique_ptr<BaseAST>($3);
+    auto aeopme=new AddExpAST(ADDMULEXP,ae,'-',me);
+    $$=aeopme;
+    }
   ;
 
 PrimaryExp
