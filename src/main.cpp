@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <fstream>
+#include <fstream> 
 #include <sstream>
 #include "IRTransformRaw.hpp"
 #include "ast.hpp"
@@ -11,12 +11,15 @@
 
 using namespace std;
 
-// 调试命令：
-// docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler/sysy-compiler maxxing/compiler-dev bash
-// build/compiler -koopa hello.c -o hello.koopa
+//调试命令：
+//docker run -it --rm -v /Users/qichangqing/Desktop/compiler:/root/compiler maxxing/compiler-dev bash
+//build/compiler -koopa hello.c -o hello.koopa
 //build/compiler -riscv hello.c -o hello.riscv
-//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv3 /root/compiler
 
+//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv1 /root/compiler
+
+//lv2.3测试命令
+//docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -riscv -s lv1 /root/compiler
 
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -27,8 +30,7 @@ using namespace std;
 extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
 
-int main(int argc, const char *argv[])
-{
+int main(int argc, const char *argv[]) {
   // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:
   // compiler 模式 输入文件 -o 输出文件
   assert(argc == 5);
@@ -39,39 +41,25 @@ int main(int argc, const char *argv[])
   yyin = fopen(input, "r");
   assert(yyin);
 
-  // 调用 parser 函数, parser 函数会进一步调用 lexer 解析输入文件的
-  // unique_ptr<string> ast;
-  // auto ret = yyparse(ast);
-  // assert(!ret);
-
-  // 输出解析得到的 AST, 其实就是个字符串
-  // cout << *ast << endl;
 
   // parse input file
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
   assert(!ret);
-  // 生成koopa ir目标代码
-  string s1 = "+";
-  int no = 0;
-  int isIV = 0;
-  // cout << endl<< "++++++++++++++" << endl;
-  ast->GenIR(s1, &no, &isIV);
-  string res = BaseAST::ss.str();
-  // cout << "-----------\n";
-  // cout << res;
-  if (strcmp(mode, "-koopa") == 0)
-  {
-    // 将生成的ir代码存放到output文件中
-    ofstream ofile(output);
-    ofile << res;
-    ofile.close();
+ //将koopa ir输出到指定文件
+  string pv="";
+  int no=0;
+  int isIV=0;
+  ast->GenIR(pv,&no,&isIV);
+  string res=BaseAST::ss.str();
+  //docker run -it --rm -v /Users/qichangqing/Desktop/compiler/sysy-compiler:/root/compiler maxxing/compiler-dev autotest -koopa -s lv3 /root/compiler
+  if(strcmp(mode,"-koopa")==0){
+    ofstream of(output);
+    of<<res;
+    of.close();
+  }else if(strcmp(mode,"-riscv")==0){
+    Compiler_IR2RISCV(res.c_str(),output);
   }
-  else if (strcmp(mode, "-riscv") == 0)
-  {
-    // 生成riscv目标代码
-    // cout << "-riscv:\n";
-    Compiler_IR2RISCV(res.c_str(), output);
-  }
+
   return 0;
 }

@@ -42,8 +42,7 @@ using namespace std;
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryExp PrimaryExp UnaryOp AddExp MulExp
-RelExp EqExp LAndExp LOrExp
+%type <ast_val> FuncDef FuncType Block Stmt Number Exp UnaryOp UnaryExp PrimaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
 //%type <int_val> Number
 
 %%
@@ -106,10 +105,11 @@ FuncType
     ftp->ft="int";
     $$=ftp;
   }
-  ;
 
 Block
   : '{' Stmt '}' {
+    //auto stmt = unique_ptr<string>($2);
+    //$$ = new string("{ " + *stmt + " }");
     auto b= new BlockAST();
     b->stmt=unique_ptr<BaseAST>($2);
     $$=b;
@@ -275,13 +275,6 @@ PrimaryExp
   }
   ;
 
-Number
-  : INT_CONST {
-    auto nu=new NumberAST($1);
-    $$=nu;
-  }
-  ;
-
 UnaryExp: 
     PrimaryExp {
       auto pexp=std::unique_ptr<BaseAST>($1);
@@ -305,6 +298,16 @@ UnaryOp:
       $$=new UnaryOpAST(NOT);
     }
   ;
+
+Number
+  : INT_CONST {
+    auto n=new NumberAST();
+    n->number=$1;
+    //$$ = new string(to_string($1));
+    $$=n;
+  }
+  ;
+
 %%
 
 // 定义错误处理函数, 其中第二个参数是错误信息

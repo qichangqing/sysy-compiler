@@ -30,47 +30,6 @@ void Compiler_IR2RISCV(const char *str, const char *output)
     ofstream ofile(output);
     string res = ss_riscv.str();
     ofile << res;
-    // cout << res;
-    // 使用 for 循环遍历函数列表
-    // ss_riscv << "  .text" << endl;
-    // for (size_t i = 0; i < raw.funcs.len; ++i)
-    // {
-    //     // 正常情况下, 列表中的元素就是函数, 我们只不过是在确认这个事实
-    //     // 当然, 你也可以基于 raw slice 的 kind, 实现一个通用的处理函数
-    //     assert(raw.funcs.kind == KOOPA_RSIK_FUNCTION);
-    //     // 获取当前函数
-    //     koopa_raw_function_t func = (koopa_raw_function_t)raw.funcs.buffer[i];
-    //     // 进一步处理当前函数
-    //     // ...
-    //     cout << "transform:========" << func->name << endl;
-    //     if (strcmp(func->name, "@main") == 0)
-    //     {
-    //         *ORiscV << "  .globl main" << endl;
-    //     }
-    //     *ORiscV << (func->name + 1) << ":" << endl;
-    //     for (size_t j = 0; j < func->bbs.len; ++j)
-    //     {
-    //         assert(func->bbs.kind == KOOPA_RSIK_BASIC_BLOCK);
-    //         koopa_raw_basic_block_t bb = (koopa_raw_basic_block_t)func->bbs.buffer[j];
-    //         // 进一步处理当前基本块
-    //         // ...
-    //         koopa_raw_slice_t insts = bb->insts;
-    //         cout << "insts:=====" << insts.kind << endl;
-    //         cout << "insts:=====" << insts.len << endl;
-    //         cout << "insts:=====" << insts.buffer << endl;
-    //         koopa_raw_value_data *rv = (koopa_raw_value_data *)insts.buffer[0];
-    //         if (rv->kind.tag == KOOPA_RVT_RETURN)
-    //         {
-    //             cout << "tag:=====return" << rv->kind.tag << endl;
-    //             cout << "tag:=====return" << KOOPA_RVT_RETURN << endl;
-    //             koopa_raw_value_t val = rv->kind.data.ret.value;
-    //             int v = val->kind.data.integer.value;
-    //             cout << "tag:=====retvalue:" << v << endl;
-    //             *ORiscV << "  li a0, " << v << endl;
-    //             *ORiscV << "  ret" << endl;
-    //         }
-    //     }
-    // }
 }
 void gen_risc_from_func(koopa_raw_function_t func)
 {
@@ -91,6 +50,8 @@ void gen_alexp(koopa_raw_binary_t bi, string op)
     string res = "";
     bool l_is_int = false;
     bool r_is_int = false;
+    string num1 = "";
+    string num2 = "";
     if (bi.lhs->kind.tag == KOOPA_RVT_INTEGER)
     {
         res += "  li    ";
@@ -100,6 +61,8 @@ void gen_alexp(koopa_raw_binary_t bi, string op)
         res += to_string(bi.lhs->kind.data.integer.value);
         res += "\n";
         l_is_int = true;
+        num1 = op_num_stack.top();
+        op_num_stack.pop();
     }
     if (bi.rhs->kind.tag == KOOPA_RVT_INTEGER)
     {
@@ -114,14 +77,27 @@ void gen_alexp(koopa_raw_binary_t bi, string op)
         res += to_string(bi.rhs->kind.data.integer.value);
         res += "\n";
         r_is_int = true;
+        num2 = op_num_stack.top();
+        op_num_stack.pop();
     }
-    string num2 = op_num_stack.top();
-    op_num_stack.pop();
-    string num1 = op_num_stack.top();
-    // if(op=="mul"){
-    //     cout<<num1<<" "<<num2<<endl;
-    // }
-    op_num_stack.pop();
+    if ((!l_is_int) && (!r_is_int))
+    {
+        num2 = op_num_stack.top();
+        op_num_stack.pop();
+        num1 = op_num_stack.top();
+        op_num_stack.pop();
+    }
+    else if ((l_is_int) && (!r_is_int))
+    {
+        num2 = op_num_stack.top();
+        op_num_stack.pop();
+    }
+    else if ((!l_is_int) && (r_is_int))
+    {
+        num1 = op_num_stack.top();
+        op_num_stack.pop();
+    }
+
     res += "  " + op + "   ";
     res += num2;
     op_num_stack.push(num2);
@@ -272,7 +248,8 @@ void gen_riscv_le(koopa_raw_binary_t bi)
     res += cr;
     op_num_stack.push(cr);
     res += ", ";
-    res += "1";
+    res+=cr;
+    res += ", 1";
     res += "\n";
     ss_riscv << res;
     it = (it + 1) % 7;
@@ -325,7 +302,8 @@ void gen_riscv_ge(koopa_raw_binary_t bi)
     res += cr;
     op_num_stack.push(cr);
     res += ", ";
-    res += "1";
+    res+=cr;
+    res += ", 1";
     res += "\n";
     ss_riscv << res;
     it = (it + 1) % 7;
@@ -625,69 +603,195 @@ void gen_risc_from_inst(koopa_raw_value_t inst)
         }
         else if (bi.op == KOOPA_RBO_SUB)
         {
-            // cout<<"sub\n";
-            string res = "";
-            bool l_is_z = false;
-            bool t_inuse = false;
+            bool l_is_i=false;
+            bool l_is_op=false;
             if (bi.lhs->kind.tag == KOOPA_RVT_INTEGER)
             {
                 int li = bi.lhs->kind.data.integer.value;
                 if (li == 0)
                 {
-                    l_is_z = true;
+                    //实现负号-
+                    string res = "";
+                    if(bi.rhs->kind.tag==KOOPA_RVT_INTEGER){
+                        res+="  li    ";
+                        res+=tt[it];
+                        res+=", ";
+                        res+=to_string(bi.rhs->kind.data.integer.value);
+                        res+="\n";
+                        it=(it+1)%7;
+                        res+="  sub    ";
+                        res+=tt[it];
+                        op_num_stack.push(tt[it]);
+                        res+=", x0, ";
+                        res+=tt[it-1];
+                        res+="\n";
+                        // cout<<res;
+                        ss_riscv<<res;
+                    }else{
+                        // it=(it+1)%7;
+                        string num=op_num_stack.top();
+                        op_num_stack.pop();
+                        res+="  sub    ";
+                        res+=tt[(it+1)%7];
+                        op_num_stack.push(tt[(it+1)%7]);
+                        res+=", x0, ";
+                        res+=num;
+                        res+="\n";
+                        // cout<<res;
+                        ss_riscv<<res;
+                    }
+                    it=(it+1)%7;
+                    // cout<<"-it: "<<it<<endl;
+                }else{
+                    l_is_i=true;
                 }
-                else
-                {
-                    res += "  li    ";
-                    res += tt[it];
-                    op_num_stack.push(tt[it]);
-                    res += ", ";
-                    res += to_string(li);
-                    res += "\n";
-                    t_inuse = true;
-                }
+            }else{
+                l_is_op=true;
             }
-            // 需要load立即数
-            if (bi.rhs->kind.tag == KOOPA_RVT_INTEGER)
-            {
-                res += "  li    ";
-                if (t_inuse == true)
-                {
-                    it = (it + 1) % 7;
+            if(l_is_i||l_is_op){
+                string res="";
+                string num1="";
+                string num2="";
+                if(l_is_i){
+                    res+="  li    ";
+                    res+=tt[it];
+                    num1=tt[it];
+                    // cout<<"sub-it: "<<it<<endl;
+                    res+=", ";
+                    res+=to_string(bi.lhs->kind.data.integer.value);
+                    res+="\n";
+                    // cout<<res;
+                    it=(it+1)%7;
+                }else{
+                    num1=op_num_stack.top();
+                    op_num_stack.pop();
                 }
-                res += tt[it];
+                if(bi.rhs->kind.tag==KOOPA_RVT_INTEGER){
+                    res+="  li    ";
+                    res+=tt[it];
+                    num2=tt[it];
+                    res+=", ";
+                    res+=to_string(bi.rhs->kind.data.integer.value);
+                    res+="\n";
+                    // cout<<res;
+                    it=(it+1)%7;
+                }else{
+                     num2=op_num_stack.top();
+                    op_num_stack.pop();
+                }
+                res+="  sub    ";
+                res+=tt[it];
                 op_num_stack.push(tt[it]);
-                res += ", ";
-                res += to_string(bi.rhs->kind.data.integer.value);
-                res += "\n";
+                res+=", ";
+                res+=num1;
+                res+=", ";
+                res+=num2;
+                res+="\n";
+                // cout<<res;
+                ss_riscv<<res;
+                // cout<<"stacksize: "<<op_num_stack.size()<<endl;
+                it=(it+1)%7;
             }
-            string num2 = "";
-            string num1 = "";
-            res += "  sub   ";
-            int i = (it + 1) % 7;
-            if (l_is_z)
-            {
-                num1 = "x0";
-                num2 = op_num_stack.top();
-                op_num_stack.pop();
-            }
-            else
-            {
-                num2 = op_num_stack.top();
-                op_num_stack.pop();
-                num1 = op_num_stack.top();
-                op_num_stack.pop();
-            }
-            res += tt[i];
-            op_num_stack.push(tt[i]);
-            res += ", ";
-            res += num1;
-            res += ", ";
-            res += num2;
-            res += "\n";
-            it = (it + 1) % 7;
-            // cout<<res;
-            ss_riscv << res;
+
+            // cout<<"sub\n";
+            // string res = "";
+            // bool l_is_z = false;
+            // bool t_inuse = false;
+            // bool l_is_i = false;
+            // bool r_is_i = false;
+            // string num1 = "";
+            // string num2 = "";
+            // if (bi.lhs->kind.tag == KOOPA_RVT_INTEGER)
+            // {
+            //     int li = bi.lhs->kind.data.integer.value;
+            //     if (li == 0)
+            //     {
+            //         l_is_z = true;
+            //     }
+            //     else
+            //     {
+            //         res += "  li    ";
+            //         res += tt[it];
+            //         op_num_stack.push(tt[it]);
+            //         res += ", ";
+            //         res += to_string(li);
+            //         res += "\n";
+            //         t_inuse = true;
+            //         num1 = op_num_stack.top();
+            //         op_num_stack.pop();
+            //         l_is_i = true;
+            //     }
+            // }
+            // // 需要load立即数
+            // if (bi.rhs->kind.tag == KOOPA_RVT_INTEGER)
+            // {
+            //     res += "  li    ";
+            //     if (t_inuse == true)
+            //     {
+            //         it = (it + 1) % 7;
+            //     }
+            //     res += tt[it];
+            //     op_num_stack.push(tt[it]);
+            //     res += ", ";
+            //     res += to_string(bi.rhs->kind.data.integer.value);
+            //     res += "\n";
+            //     num2 = op_num_stack.top();
+            //     op_num_stack.pop();
+            //     r_is_i = true;
+            // }
+            // res += "  sub   ";
+            // int i =(it + 1) % 7;
+            // // if((!r_is_i)&&(l_is_z||(!l_is_i))){
+
+            // // }else{
+            // //     i = (it + 1) % 7;
+            // // }
+            // if (l_is_z)
+            // {
+            //     num1 = "x0";
+            //     if (!r_is_i)
+            //     {
+            //         num2 = op_num_stack.top();
+            //         op_num_stack.pop();
+            //     }
+            // }
+            // else
+            // {
+            //     if ((!l_is_i) && (!r_is_i))
+            //     {
+            //         num2 = op_num_stack.top();
+            //         op_num_stack.pop();
+            //         num1 = op_num_stack.top();
+            //         op_num_stack.pop();
+            //     }
+            //     else if ((l_is_i) && (!r_is_i))
+            //     {
+            //         num2 = op_num_stack.top();
+            //         op_num_stack.pop();
+            //     }
+            //     else if ((!l_is_i) && (r_is_i))
+            //     {
+            //         num1 = op_num_stack.top();
+            //         op_num_stack.pop();
+            //     }
+            // }
+            // res += tt[i];
+            // op_num_stack.push(tt[i]);
+            // res += ", ";
+            // res += num1;
+            // res += ", ";
+            // res += num2;
+            // res += "\n";
+            // // if(!l_is_z){
+            // //     it = (i + 1) % 7;
+            // // }else{
+            // //     it=i;
+            // // }
+            // // cout<<res;
+            // it = (i + 1) % 7;
+            // // it=i;
+            // cout<<"sub-it= "<<it<<endl;
+            // ss_riscv << res;
         }
         else if (bi.op == KOOPA_RBO_ADD)
         {
@@ -703,7 +807,7 @@ void gen_risc_from_inst(koopa_raw_value_t inst)
         }
         else if (bi.op == KOOPA_RBO_MOD)
         {
-            gen_alexp(bi, "mod");
+            gen_alexp(bi, "rem");
         }
         else if (bi.op == KOOPA_RBO_LT)
         {
@@ -750,14 +854,14 @@ void gen_risc_from_inst(koopa_raw_value_t inst)
         }
         else
         {
-            int ri=ret.value->kind.data.integer.value;
+            int ri = ret.value->kind.data.integer.value;
             string res = "";
             res += "  li    ";
             res += "a0, ";
             res += to_string(ri);
             res += "\n";
             res += "  ret\n";
-            ss_riscv<<res;
+            ss_riscv << res;
         }
     }
     else
